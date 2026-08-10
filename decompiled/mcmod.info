@@ -1,0 +1,11 @@
+[
+  {
+    "modid": "universalaccountmanager",
+    "name": "UniversalAccountManager",
+    "description": "Account manager with token login, Hypixel ban tracking, skin head previews, skin changing, and built-in Force Skin (local-only skin override).",
+    "version": "1.7",
+    "mcversion": "1.8.9",
+    "authorList": ["proxycracked"],
+    "credits": "Based on AccountManager (ksyzov), tokenlogin (yx-zero), SkinChanger (boomboompower)."
+  }
+]

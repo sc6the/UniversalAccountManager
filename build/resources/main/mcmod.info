@@ -1,0 +1,10 @@
+[
+  {
+    "modid": "universalaccountmanager",
+    "name": "Universal Account Manager",
+    "description": "A Minecraft 1.8.9 account manager with Microsoft refresh-token login and Localts purchasing.",
+    "version": "2.10",
+    "mcversion": "1.8.9",
+    "clientSideOnly": true
+  }
+]

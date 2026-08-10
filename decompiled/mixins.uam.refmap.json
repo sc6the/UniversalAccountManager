@@ -1,0 +1,22 @@
+{
+  "mappings": {
+    "me/proxycracked/universalaccountmanager/skin/mixin/MixinAbstractClientPlayer": {
+      "getLocationSkin": "Lnet/minecraft/client/entity/AbstractClientPlayer;func_110306_p()Lnet/minecraft/util/ResourceLocation;",
+      "getSkinType": "Lnet/minecraft/client/entity/AbstractClientPlayer;func_175154_l()Ljava/lang/String;"
+    }
+  },
+  "data": {
+    "notch": {
+      "me/proxycracked/universalaccountmanager/skin/mixin/MixinAbstractClientPlayer": {
+        "getLocationSkin": "Lbet;i()Ljy;",
+        "getSkinType": "Lbet;l()Ljava/lang/String;"
+      }
+    },
+    "searge": {
+      "me/proxycracked/universalaccountmanager/skin/mixin/MixinAbstractClientPlayer": {
+        "getLocationSkin": "Lnet/minecraft/client/entity/AbstractClientPlayer;func_110306_p()Lnet/minecraft/util/ResourceLocation;",
+        "getSkinType": "Lnet/minecraft/client/entity/AbstractClientPlayer;func_175154_l()Ljava/lang/String;"
+      }
+    }
+  }
+}
