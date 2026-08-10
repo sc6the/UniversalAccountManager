@@ -1,0 +1,61 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { name = "forge"; url = "https://maven.minecraftforge.net/" }
+        maven { name = "sonatype"; url = "https://oss.sonatype.org/content/repositories/snapshots/" }
+    }
+    dependencies {
+        classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
+    }
+}
+
+apply plugin: "net.minecraftforge.gradle.forge"
+
+version = "2.10"
+group = "me.proxycracked.universalaccountmanager"
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+minecraft {
+    version = "1.8.9-11.15.1.2318-1.8.9"
+    runDir = "run"
+    mappings = "stable_22"
+}
+
+dependencies {
+    compile files("libs/UniversalAccountManager-1.7-original.jar")
+    compile files("libs/mixin-0.7.11-SNAPSHOT.jar")
+    compile "net.java.dev.jna:platform:3.4.0"
+}
+
+jar {
+    classifier = "overlay"
+}
+
+task repairedJar(type: Jar, dependsOn: reobfJar) {
+    archiveName = "UniversalAccountManager-2.10.jar"
+    destinationDir = file("$buildDir/libs")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(zipTree(jar.archivePath))
+    from(zipTree("libs/UniversalAccountManager-1.7-original.jar"))
+    from(zipTree("libs/mixin-0.7.11-SNAPSHOT.jar"))
+
+    exclude "META-INF/MANIFEST.MF"
+    exclude "META-INF/*.SF"
+    exclude "META-INF/*.RSA"
+    exclude "META-INF/*.DSA"
+
+    manifest {
+        attributes(
+            "Manifest-Version": "1.0",
+            "MixinConfigs": "mixins.uam.json",
+            "FMLCorePluginContainsFMLMod": "true",
+            "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
+            "ForceLoadAsMod": "true"
+        )
+    }
+}
+
+assemble.dependsOn repairedJar
