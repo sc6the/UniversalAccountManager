@@ -33,6 +33,9 @@ import org.lwjgl.input.Keyboard;
 public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
     private static final int FAVORITES_PER_PAGE = 4;
     private static final int CONFIRM_NAME_ID = 5200;
+    private static final int MIN_CONTENT_HALF_WIDTH = 152;
+    private static final int MAX_CONTENT_HALF_WIDTH = 200;
+    private static final int COLUMN_GAP = 4;
 
     private final GuiScreen previousScreen;
     private final ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
@@ -51,7 +54,7 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
     private int page;
     private String importVariant = "classic";
     private volatile boolean busy;
-    private volatile String status = "&7Import a skin PNG or select a favorite.&r";
+    private volatile String status = "";
     private boolean openingConfirmation;
     private String pendingName = "";
 
@@ -74,6 +77,10 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
     private void initSkinControls() {
         int centerX = width / 2;
         int top = panelTop();
+        int halfWidth = contentHalfWidth();
+        int columnWidth = halfWidth - COLUMN_GAP;
+        int leftX = centerX - halfWidth;
+        int rightX = centerX + COLUMN_GAP;
         String selectedId = selectedFavorite() == null ? null : selectedFavorite().getId();
         favorites = SkinFavoritesManager.getFavorites();
         if (selectedId != null) selectedIndex = indexOf(selectedId);
@@ -84,30 +91,34 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
         int start = page * FAVORITES_PER_PAGE;
         int end = Math.min(favorites.size(), start + FAVORITES_PER_PAGE);
         for (int index = start; index < end; index++) {
-            buttonList.add(new GuiButton(100 + index - start, centerX + 4, top + 49 + (index - start) * 22, 148, 20, favoriteLabel(index)));
+            buttonList.add(new GuiButton(100 + index - start, rightX, top + 49 + (index - start) * 26,
+                columnWidth, 20, favoriteLabel(index, columnWidth - 10)));
         }
-        GuiButton previous = new GuiButton(20, centerX + 4, top + 141, 72, 20, "< Previous");
-        GuiButton next = new GuiButton(21, centerX + 80, top + 141, 72, 20, "Next >");
+        int pageButtonWidth = (columnWidth - COLUMN_GAP) / 2;
+        GuiButton previous = new GuiButton(20, rightX, top + 157, pageButtonWidth, 20, "< Previous");
+        GuiButton next = new GuiButton(21, rightX + pageButtonWidth + COLUMN_GAP, top + 157,
+            columnWidth - pageButtonWidth - COLUMN_GAP, 20, "Next >");
         previous.enabled = page > 0;
         next.enabled = page + 1 < pages;
         buttonList.add(previous);
         buttonList.add(next);
 
-        buttonList.add(new GuiButton(10, centerX - 152, height - 48, 148, 20, "Import Skin PNG"));
-        buttonList.add(applyButton = new GuiButton(12, centerX + 4, height - 48, 148, 20, "Apply to Active Account"));
-        buttonList.add(new GuiButton(11, centerX - 152, height - 24, 96, 20, modelLabel()));
-        buttonList.add(defaultButton = new GuiButton(13, centerX + 56, height - 24, 96, 20, "Set Default"));
+        buttonList.add(new GuiButton(10, leftX, height - 48, columnWidth, 20, "Import Skin PNG"));
+        buttonList.add(applyButton = new GuiButton(12, rightX, height - 48, columnWidth, 20, "Apply to Active Account"));
+        buttonList.add(new GuiButton(11, leftX, height - 24, 96, 20, modelLabel()));
+        buttonList.add(defaultButton = new GuiButton(13, centerX + halfWidth - 96, height - 24, 96, 20, "Set Default"));
         updateButtons();
     }
 
     private void initNameControls() {
         int centerX = width / 2;
+        int halfWidth = contentHalfWidth();
         int fieldY = panelTop() + 69;
-        nameField = new GuiTextField(0, fontRendererObj, centerX - 152, fieldY, 226, 20);
+        nameField = new GuiTextField(0, fontRendererObj, centerX - halfWidth, fieldY, halfWidth * 2, 20);
         nameField.setMaxStringLength(16);
         nameField.setText("");
         nameField.setFocused(true);
-        buttonList.add(saveNameButton = new GuiButton(30, centerX + 78, fieldY, 74, 20, "Save"));
+        buttonList.add(saveNameButton = new GuiButton(30, centerX - 48, fieldY + 26, 96, 20, "Save"));
         updateButtons();
     }
 
@@ -136,8 +147,11 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
     private void drawSkinScreen() {
         int centerX = width / 2;
         int top = panelTop();
-        int previewX = centerX - 78;
-        Gui.drawRect(centerX - 145, top + 44, centerX - 11, top + 163, 0x50000000);
+        int halfWidth = contentHalfWidth();
+        int columnWidth = halfWidth - COLUMN_GAP;
+        int previewX = centerX - COLUMN_GAP - columnWidth / 2;
+        int favoritesX = centerX + COLUMN_GAP + columnWidth / 2;
+        Gui.drawRect(centerX - halfWidth, top + 44, centerX - COLUMN_GAP, top + 181, 0x50000000);
         drawCenteredString(fontRendererObj, "Preview", previewX, top + 50, 0xAAAAAA);
         Favorite favorite = selectedFavorite();
         if (favorite == null) {
@@ -147,25 +161,29 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
             if (texture == null) {
                 drawCenteredString(fontRendererObj, "Preview unavailable", previewX, top + 98, 0xFF7777);
             } else {
-                SkinPreview3D.draw(previewX, top + 151, 38, 0.0F, 0.0F, texture, "slim".equals(favorite.getVariant()));
+                SkinPreview3D.draw(previewX, top + 171, 48, 0.0F, 0.0F, texture, "slim".equals(favorite.getVariant()));
             }
         }
 
-        drawCenteredString(fontRendererObj, "Favorites (" + favorites.size() + ")", centerX + 78, top + 38, 0xAAAAAA);
-        if (favorites.isEmpty()) drawCenteredString(fontRendererObj, "Import a PNG to add one", centerX + 78, top + 79, 0x777777);
-        drawStatus(top + 158);
+        drawCenteredString(fontRendererObj, "Favorites (" + favorites.size() + ")", favoritesX, top + 38, 0xAAAAAA);
+        if (favorites.isEmpty()) drawCenteredString(fontRendererObj, "Import a PNG to add one", favoritesX, top + 89, 0x777777);
+        drawStatus(top + 186);
     }
 
     private void drawNameScreen() {
         int centerX = width / 2;
         int top = panelTop();
-        drawString(fontRendererObj, "Minecraft name:", centerX - 152, top + 56, 0xAAAAAA);
+        drawString(fontRendererObj, "Minecraft name:", centerX - contentHalfWidth(), top + 56, 0xAAAAAA);
         nameField.drawTextBox();
-        drawStatus(top + 101);
+        drawStatus(top + 123);
     }
 
     private int panelTop() {
         return Math.max(7, (height - 224) / 2);
+    }
+
+    private int contentHalfWidth() {
+        return Math.max(MIN_CONTENT_HALF_WIDTH, Math.min(MAX_CONTENT_HALF_WIDTH, width / 2 - 8));
     }
 
     private void drawStatus(int y) {
@@ -207,12 +225,12 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
         switch (button.id) {
             case 0:
                 tab = Tab.SKIN;
-                status = "&7Import a skin PNG or select a favorite.&r";
+                status = "";
                 initGui();
                 break;
             case 1:
                 tab = Tab.NAME;
-                status = "&7Enter a name and click Save.&r";
+                status = "";
                 initGui();
                 break;
             case 2:
@@ -398,11 +416,11 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
         return -1;
     }
 
-    private String favoriteLabel(int index) {
+    private String favoriteLabel(int index, int maxWidth) {
         Favorite favorite = favorites.get(index);
         String prefix = index == selectedIndex ? "> " : "";
         String suffix = favorite.getId().equals(SkinFavoritesManager.getDefaultId()) ? " *" : "";
-        return trim(prefix + favorite.getName() + suffix, 138);
+        return trim(prefix + favorite.getName() + suffix, maxWidth);
     }
 
     private String modelLabel() {
