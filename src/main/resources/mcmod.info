@@ -2,8 +2,8 @@
   {
     "modid": "universalaccountmanager",
     "name": "Universal Account Manager",
-    "description": "A Minecraft 1.8.9 account manager with Microsoft refresh-token login and Localts purchasing.",
-    "version": "2.10",
+    "description": "A Minecraft 1.8.9 account manager with Microsoft device-code, refresh-token, cookie and offline logins plus one buy-accounts screen for Localts, Nicealts and Fernan Club.",
+    "version": "2.15",
     "mcversion": "1.8.9",
     "clientSideOnly": true
   }

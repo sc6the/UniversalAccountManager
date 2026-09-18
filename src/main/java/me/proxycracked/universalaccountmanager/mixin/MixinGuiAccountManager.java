@@ -6,6 +6,7 @@ import me.proxycracked.universalaccountmanager.auth.ExpiredAccountCleaner;
 import me.proxycracked.universalaccountmanager.gui.GuiAccountManager;
 import me.proxycracked.universalaccountmanager.gui.GuiAccountStores;
 import me.proxycracked.universalaccountmanager.gui.GuiChanger;
+import me.proxycracked.universalaccountmanager.gui.LoginController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
@@ -76,6 +77,18 @@ public abstract class MixinGuiAccountManager {
     )
     private void moveActiveUsername(GuiAccountManager screen, FontRenderer font, String text, int x, int y, int color) {
         font.drawStringWithShadow(text, 5.0F, 28.0F, color);
+    }
+
+    /**
+     * Every login route in the screen (button, double click, Enter, the context menu) funnels into
+     * {@code doLogin}, so taking it over here is what makes refresh tokens and offline accounts work
+     * from the list. See {@link LoginController} for why the bundled implementation cannot.
+     */
+    @Inject(method = "doLogin", at = @At("HEAD"), cancellable = true, remap = false)
+    private void uam$unifiedLogin(CallbackInfo callback) {
+        if (LoginController.start((GuiScreen) (Object) this)) {
+            callback.cancel();
+        }
     }
 
     @Inject(method = "func_146284_a", at = @At("HEAD"), cancellable = true, remap = false)

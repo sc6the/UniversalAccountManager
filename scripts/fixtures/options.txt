@@ -1,0 +1,3 @@
+resourcePacks:["uam-selected-widgets"]
+guiScale:2
+pauseOnLostFocus:false

@@ -20,6 +20,7 @@ public abstract class MixinUniversalAccountManager {
 
     @Inject(method = "init", at = @At("RETURN"), remap = false)
     private static void refreshStoredAccounts(FMLInitializationEvent event, CallbackInfo callback) {
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new me.proxycracked.universalaccountmanager.gui.AccountMenuEntry());
         SkinFavoritesManager.initializeAccountTracking();
         StartupAccountRefresher.start();
         AccountValidator.validateAll();

@@ -151,7 +151,8 @@ public class GuiChanger extends GuiScreen implements GuiYesNoCallback {
         int columnWidth = halfWidth - COLUMN_GAP;
         int previewX = centerX - COLUMN_GAP - columnWidth / 2;
         int favoritesX = centerX + COLUMN_GAP + columnWidth / 2;
-        Gui.drawRect(centerX - halfWidth, top + 44, centerX - COLUMN_GAP, top + 181, 0x50000000);
+        if (me.proxycracked.universalaccountmanager.gui.theme.UiTheme.get().modern)
+            Gui.drawRect(centerX - halfWidth, top + 44, centerX - COLUMN_GAP, top + 181, 0x50000000);
         drawCenteredString(fontRendererObj, "Preview", previewX, top + 50, 0xAAAAAA);
         Favorite favorite = selectedFavorite();
         if (favorite == null) {

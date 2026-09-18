@@ -11,11 +11,20 @@ buildscript {
 
 apply plugin: "net.minecraftforge.gradle.forge"
 
-version = "2.10"
+version = "2.15"
 group = "me.proxycracked.universalaccountmanager"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
+
+// Runtime account data and shop keys are never release inputs, including when merging libraries.
+tasks.withType(Jar) {
+    exclude 'config/**', 'run/**', 'logs/**', '**/*.dat', '**/*.log'
+    exclude '**/universalaccountmanager_accounts.json', '**/localtsapi.txt', '**/nicealtsapi.txt'
+    exclude '**/.env', '**/.env.*'
+}
 
 minecraft {
     version = "1.8.9-11.15.1.2318-1.8.9"
@@ -34,7 +43,7 @@ jar {
 }
 
 task repairedJar(type: Jar, dependsOn: reobfJar) {
-    archiveName = "UniversalAccountManager-2.10.jar"
+    archiveName = "UniversalAccountManager-${version}.jar"
     destinationDir = file("$buildDir/libs")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -59,3 +68,45 @@ task repairedJar(type: Jar, dependsOn: reobfJar) {
 }
 
 assemble.dependsOn repairedJar
+
+// Both editions contain identical code. The marker only chooses the initial appearance.
+task modernJar(type: Jar, dependsOn: repairedJar) {
+    archiveName = "UniversalAccountManager-${version}-modern.jar"
+    destinationDir = file("$buildDir/libs")
+    from { zipTree(repairedJar.archivePath) }
+    from 'src/modern'
+    manifest.from repairedJar.manifest
+}
+
+task legacyJar(type: Jar, dependsOn: repairedJar) {
+    archiveName = "UniversalAccountManager-${version}-legacy.jar"
+    destinationDir = file("$buildDir/libs")
+    from { zipTree(repairedJar.archivePath) }
+    from 'src/legacy'
+    manifest.from repairedJar.manifest
+}
+
+task themeTest(type: JavaExec, dependsOn: compileJava) {
+    classpath = files("$buildDir/classes/main", "$buildDir/theme-tests")
+    main = 'ThemeSettingsTest'
+    doFirst {
+        ant.mkdir(dir: "$buildDir/theme-tests")
+        ant.javac(srcdir: 'src/theme-test', destdir: "$buildDir/theme-tests", source: '1.8', target: '1.8',
+            includeantruntime: false, classpath: sourceSets.main.output.classesDir)
+    }
+}
+
+assemble.dependsOn modernJar, legacyJar
+
+// Opt-in, isolated game smoke test. Never included in release jars.
+sourceSets {
+    smoke {
+        java.srcDir 'src/smoke/java'
+        compileClasspath = sourceSets.main.compileClasspath + files("$buildDir/classes/main")
+    }
+}
+task smokeJar(type: Jar, dependsOn: [compileJava, compileSmokeJava]) {
+    archiveName = 'uam-ui-smoke.jar'
+    from sourceSets.smoke.output
+}
+reobf { smokeJar {} }

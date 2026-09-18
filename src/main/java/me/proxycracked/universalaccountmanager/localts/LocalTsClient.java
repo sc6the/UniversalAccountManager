@@ -11,6 +11,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import me.proxycracked.universalaccountmanager.store.RateLimitSignal;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -24,6 +26,7 @@ import org.apache.http.util.EntityUtils;
 
 public final class LocalTsClient {
     public static final String BASE_URL = "https://localts.store";
+    private static final int MAX_ATTEMPTS = 4;
     private static final RequestConfig REQUEST_CONFIG = RequestConfig.custom()
         .setConnectionRequestTimeout(15000)
         .setConnectTimeout(15000)
@@ -38,8 +41,8 @@ public final class LocalTsClient {
         return new User(requiredString(json, "username"), requiredNumber(json, "balance"));
     }
 
-    public static List<Product> getProducts() throws Exception {
-        JsonObject json = execute(new HttpGet(BASE_URL + "/v1/products"), null);
+    public static List<Product> getProducts(String apiKey) throws Exception {
+        JsonObject json = execute(new HttpGet(BASE_URL + "/v1/products"), apiKey);
         JsonArray array = requiredArray(json, "products");
         List<Product> products = new ArrayList<>();
         for (JsonElement element : array) {
@@ -137,9 +140,29 @@ public final class LocalTsClient {
     }
 
     private static JsonObject execute(HttpRequestBase request, String apiKey) throws Exception {
+        // Only idempotent reads are retried; a purchase POST must never be replayed.
+        boolean retryable = request instanceof HttpGet;
+        RateLimitedException lastError = null;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                return executeOnce(request, apiKey);
+            } catch (RateLimitedException error) {
+                lastError = error;
+                if (!retryable || attempt == MAX_ATTEMPTS) {
+                    break;
+                }
+                long wait = error.getRetryAfterMillis() > 0L ? error.getRetryAfterMillis() : 1500L * (1L << (attempt - 1));
+                Thread.sleep(Math.min(wait, 15000L));
+                request.reset();
+            }
+        }
+        throw lastError;
+    }
+
+    private static JsonObject executeOnce(HttpRequestBase request, String apiKey) throws Exception {
         request.setConfig(REQUEST_CONFIG);
         request.setHeader("Accept", "application/json");
-        request.setHeader("User-Agent", "UniversalAccountManager/2.10");
+        request.setHeader("User-Agent", "UniversalAccountManager/2.14");
         if (!StringUtils.isBlank(apiKey)) {
             request.setHeader("X-API-Key", apiKey);
         }
@@ -153,17 +176,65 @@ public final class LocalTsClient {
                 JsonElement parsed = new JsonParser().parse(body);
                 json = parsed.isJsonObject() ? parsed.getAsJsonObject() : new JsonObject();
             } catch (RuntimeException error) {
-                throw new LocalTsException("Localts returned an invalid response (HTTP " + status + ")");
+                json = new JsonObject();
             }
 
+            if (status == 429) {
+                long retryAfter = retryAfterMillis(response.getFirstHeader("Retry-After"));
+                // Reported even though the retry below usually succeeds, so a scan can pace itself.
+                RateLimitSignal.report(retryAfter);
+                throw new RateLimitedException(
+                    errorMessage(json, "Localts rate limit reached (HTTP 429). Waiting before retrying"),
+                    retryAfter
+                );
+            }
+            if (status == 408 || status == 425 || status >= 500) {
+                throw new RateLimitedException(
+                    errorMessage(json, "Localts is temporarily unavailable (HTTP " + status + ")"), 0L
+                );
+            }
+            if (status == 403 && isCloudflareBlock(body)) {
+                throw new LocalTsException(
+                    "Localts rejected this API key at its Cloudflare gateway (HTTP 403). "
+                        + "Generate a current lc.* API key and reconnect"
+                );
+            }
             if (status < 200 || status >= 300) {
-                throw new LocalTsException(errorMessage(json, "Localts request failed (HTTP " + status + ")"));
+                throw new LocalTsException(errorMessage(json, "Localts request failed (HTTP " + status + "): " + snippet(body)));
+            }
+            if (json.entrySet().isEmpty() && !StringUtils.isBlank(body)) {
+                throw new LocalTsException("Localts returned a non-JSON response (HTTP " + status + "): " + snippet(body));
             }
             if (!json.has("success") || !json.get("success").getAsBoolean()) {
                 throw new LocalTsException(errorMessage(json, "Localts rejected the request"));
             }
             return json;
         }
+    }
+
+    private static long retryAfterMillis(org.apache.http.Header header) {
+        if (header == null || StringUtils.isBlank(header.getValue())) {
+            return 0L;
+        }
+        try {
+            return Math.max(0L, (long) (Double.parseDouble(header.getValue().trim()) * 1000.0D));
+        } catch (RuntimeException ignored) {
+            return 0L;
+        }
+    }
+
+    private static String snippet(String body) {
+        String value = body == null ? "" : body.replaceAll("\\s+", " ").trim();
+        if (value.isEmpty()) {
+            return "empty body";
+        }
+        return value.length() > 120 ? value.substring(0, 120) + "..." : value;
+    }
+
+    private static boolean isCloudflareBlock(String body) {
+        String value = body == null ? "" : body.toLowerCase();
+        return value.contains("cloudflare")
+            && (value.contains("attention required") || value.contains("just a moment"));
     }
 
     private static String errorMessage(JsonObject json, String fallback) {
@@ -258,6 +329,7 @@ public final class LocalTsClient {
         public int getStock() { return stock; }
         public String getType() { return type; }
         public List<String> getTags() { return tags; }
+        public Map<Integer, Double> getQuantityDiscounts() { return quantityDiscounts; }
 
         public double discountFor(int amount) {
             double discount = 0.0D;
@@ -373,9 +445,22 @@ public final class LocalTsClient {
         public int getTotalPages() { return totalPages; }
     }
 
-    public static final class LocalTsException extends Exception {
+    public static class LocalTsException extends Exception {
         public LocalTsException(String message) {
             super(message);
+        }
+    }
+
+    public static final class RateLimitedException extends LocalTsException {
+        private final long retryAfterMillis;
+
+        public RateLimitedException(String message, long retryAfterMillis) {
+            super(message);
+            this.retryAfterMillis = retryAfterMillis;
+        }
+
+        public long getRetryAfterMillis() {
+            return retryAfterMillis;
         }
     }
 }

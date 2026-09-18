@@ -2,24 +2,29 @@ package me.proxycracked.universalaccountmanager.gui;
 
 import java.util.ArrayList;
 import java.util.List;
-import me.proxycracked.universalaccountmanager.gui.GuiLocalTsStore.ImportCandidate;
+
+import me.proxycracked.universalaccountmanager.store.StoreImportCandidate;
+
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 
-public class GuiLocalTsImportSelection extends GuiScreen {
+/** Pick which past deliveries to turn into accounts. Shared by every shop. */
+public class GuiStoreImportSelection extends GuiScreen {
     private static final int PAGE_SIZE = 5;
 
-    private final GuiLocalTsStore parent;
-    private final List<ImportCandidate> candidates;
+    private final GuiStore parent;
+    private final String title;
+    private final List<StoreImportCandidate> candidates;
     private final boolean[] selected;
     private int page;
     private String status = "Select the accounts to add to your list.";
     private GuiButton importButton;
     private GuiButton backButton;
 
-    public GuiLocalTsImportSelection(GuiLocalTsStore parent, List<ImportCandidate> candidates) {
+    public GuiStoreImportSelection(GuiStore parent, String title, List<StoreImportCandidate> candidates) {
         this.parent = parent;
-        this.candidates = new ArrayList<>(candidates);
+        this.title = title;
+        this.candidates = new ArrayList<StoreImportCandidate>(candidates);
         this.selected = new boolean[candidates.size()];
     }
 
@@ -30,8 +35,7 @@ public class GuiLocalTsImportSelection extends GuiScreen {
         int start = page * PAGE_SIZE;
         int end = Math.min(candidates.size(), start + PAGE_SIZE);
         for (int index = start; index < end; index++) {
-            String label = candidateLabel(index);
-            buttonList.add(new GuiButton(100 + index - start, centerX - 152, 36 + (index - start) * 22, 304, 20, label));
+            buttonList.add(new GuiButton(100 + index - start, centerX - 152, 36 + (index - start) * 22, 304, 20, candidateLabel(index)));
         }
         buttonList.add(new GuiButton(1, centerX - 152, 148, 148, 20, "Previous Page"));
         buttonList.add(new GuiButton(2, centerX + 4, 148, 148, 20, "Next Page"));
@@ -43,16 +47,16 @@ public class GuiLocalTsImportSelection extends GuiScreen {
     }
 
     private String candidateLabel(int index) {
-        ImportCandidate candidate = candidates.get(index);
+        StoreImportCandidate candidate = candidates.get(index);
         String prefix = selected[index] ? "[x] " : "[ ] ";
-        String suffix = "  (order " + candidate.getOrderId() + ")";
+        String suffix = candidate.getOrderId().isEmpty() ? "" : "  (" + candidate.getOrderId() + ")";
         return fontRendererObj.trimStringToWidth(prefix + candidate.getLabel() + suffix, 294);
     }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         drawDefaultBackground();
-        drawCenteredString(fontRendererObj, "Import Localts Accounts", width / 2, 14, 0xFFFFFF);
+        drawCenteredString(fontRendererObj, title, width / 2, 14, 0xFFFFFF);
         drawCenteredString(fontRendererObj,
             selectedCount() + " selected  |  Page " + (page + 1) + "/" + pageCount(),
             width / 2, 25, 0xAAAAAA);
@@ -62,12 +66,16 @@ public class GuiLocalTsImportSelection extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) {
-        if (keyCode == 1) actionPerformed(backButton);
+        if (keyCode == 1) {
+            actionPerformed(backButton);
+        }
     }
 
     @Override
     protected void actionPerformed(GuiButton button) {
-        if (button == null || !button.enabled) return;
+        if (button == null || !button.enabled) {
+            return;
+        }
         if (button.id >= 100 && button.id < 100 + PAGE_SIZE) {
             int index = page * PAGE_SIZE + button.id - 100;
             if (index < candidates.size()) {
@@ -87,20 +95,24 @@ public class GuiLocalTsImportSelection extends GuiScreen {
                 initGui();
                 break;
             case 3:
-                for (int i = 0; i < selected.length; i++) selected[i] = true;
+                for (int index = 0; index < selected.length; index++) {
+                    selected[index] = true;
+                }
                 initGui();
                 break;
             case 4:
-                for (int i = 0; i < selected.length; i++) selected[i] = false;
+                for (int index = 0; index < selected.length; index++) {
+                    selected[index] = false;
+                }
                 initGui();
                 break;
             case 5:
-                List<ImportCandidate> chosen = selectedCandidates();
+                List<StoreImportCandidate> chosen = selectedCandidates();
                 if (chosen.isEmpty()) {
                     status = "Select at least one account first.";
                 } else {
                     mc.displayGuiScreen(parent);
-                    parent.importSelectedPurchases(chosen);
+                    parent.importCandidates(chosen);
                 }
                 break;
             case 6:
@@ -114,10 +126,16 @@ public class GuiLocalTsImportSelection extends GuiScreen {
     private void updateButtons() {
         int pages = pageCount();
         for (GuiButton button : buttonList) {
-            if (button.id == 1) button.enabled = page > 0;
-            if (button.id == 2) button.enabled = page + 1 < pages;
+            if (button.id == 1) {
+                button.enabled = page > 0;
+            }
+            if (button.id == 2) {
+                button.enabled = page + 1 < pages;
+            }
         }
-        if (importButton != null) importButton.enabled = selectedCount() > 0;
+        if (importButton != null) {
+            importButton.enabled = selectedCount() > 0;
+        }
     }
 
     private int pageCount() {
@@ -126,14 +144,20 @@ public class GuiLocalTsImportSelection extends GuiScreen {
 
     private int selectedCount() {
         int count = 0;
-        for (boolean value : selected) if (value) count++;
+        for (boolean value : selected) {
+            if (value) {
+                count++;
+            }
+        }
         return count;
     }
 
-    private List<ImportCandidate> selectedCandidates() {
-        List<ImportCandidate> result = new ArrayList<>();
-        for (int i = 0; i < candidates.size(); i++) {
-            if (selected[i]) result.add(candidates.get(i));
+    private List<StoreImportCandidate> selectedCandidates() {
+        List<StoreImportCandidate> result = new ArrayList<StoreImportCandidate>();
+        for (int index = 0; index < candidates.size(); index++) {
+            if (selected[index]) {
+                result.add(candidates.get(index));
+            }
         }
         return result;
     }

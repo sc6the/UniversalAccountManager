@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [],
   "client": [
-    "MixinGuiAccountManager",
+    "MixinUiButton",
+    "MixinUiScreen",
+    "MixinUiFont",
     "MixinUniversalAccountManager"
   ]
 }

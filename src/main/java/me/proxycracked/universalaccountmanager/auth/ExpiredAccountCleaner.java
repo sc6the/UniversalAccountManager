@@ -52,10 +52,22 @@ public final class ExpiredAccountCleaner {
     private static void clearValidatedExpired(long generation) {
         if (generation != GENERATION.get()) return;
         int before = UniversalAccountManager.accounts.size();
-        UniversalAccountManager.accounts.removeIf(account -> Boolean.FALSE.equals(account.getAvailable()));
+        UniversalAccountManager.accounts.removeIf(ExpiredAccountCleaner::isBeyondRepair);
         if (UniversalAccountManager.accounts.size() != before) {
             UniversalAccountManager.resort();
             UniversalAccountManager.save();
         }
+    }
+
+    /**
+     * Only sweeps pasted-token accounts that have nothing left to log in with.
+     *
+     * <p>Offline accounts have no token by design, and anything holding a refresh token can mint a
+     * new session on demand, so neither is ever "expired" - deleting those was silent data loss.</p>
+     */
+    private static boolean isBeyondRepair(Account account) {
+        return Boolean.FALSE.equals(account.getAvailable())
+            && !AccountTypes.isOffline(account)
+            && !AccountTypes.isRefreshable(account);
     }
 }
