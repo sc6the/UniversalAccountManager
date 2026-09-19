@@ -41,7 +41,7 @@ if ($UseSelectedWidgets) {
     }
     if (!$foundWidgets) { throw 'No widgets.png found in the selected resource packs' }
 }
-Copy-Item -LiteralPath (Join-Path $project "build\libs\UniversalAccountManager-2.15-$Edition.jar") -Destination (Join-Path $run 'mods')
+Copy-Item -LiteralPath (Join-Path $project "build\libs\UniversalAccountManager-2.16-$Edition.jar") -Destination (Join-Path $run 'mods')
 Copy-Item -LiteralPath (Join-Path $project 'build\libs\uam-ui-smoke.jar') -Destination (Join-Path $run 'mods')
 if ($WithUtils) { Copy-Item -LiteralPath (Join-Path (Split-Path $project -Parent) 'BlankClient\build\libs\BlankUtils-1.0.jar') -Destination (Join-Path $run 'mods') }
 if ($BlankUiCheck -and !$WithUtils) { throw '-BlankUiCheck requires -WithUtils' }

@@ -112,7 +112,7 @@ public class GuiAccountManager extends GuiScreen {
         fontRendererObj.drawString(fontRendererObj.trimStringToWidth("Playing as " + mc.getSession().getUsername(), contentWidth), left, 25, t.muted);
         UiTheme.panel(left, 61, contentWidth - 154, 20, t.surface);
         search.drawTextBox();
-        if (query.isEmpty() && !search.isFocused()) fontRendererObj.drawString("Search name or type...  Ctrl+F", left + 5, 67, t.muted);
+        if (query.isEmpty() && !search.isFocused()) fontRendererObj.drawString("Search Accounts", left + 5, 67, t.muted);
         UiTheme.panel(left, top, contentWidth, bottom - top, UiTheme.blend(t.background, t.surface, .45f));
         for (int i = first; i < Math.min(visible.size(), first + rows); i++) {
             Account a = visible.get(i);
@@ -129,12 +129,13 @@ public class GuiAccountManager extends GuiScreen {
             } else UiTheme.panel(left + 8, y + 3, 22, 22, t.surface);
             boolean active = name(a).equals(mc.getSession().getUsername());
             String label = (a.isPinned() ? "* " : "") + name(a) + (active ? "  [active]" : "");
-            fontRendererObj.drawString(fontRendererObj.trimStringToWidth(label, contentWidth - 130), left + 38, y + 5, active ? t.success : t.text);
+            String ban = AccountTypes.isOffline(a) ? "" : TextFormatting.translate(HypixelBanCheck.renderStatus(a));
+            int banX = left + contentWidth - 12 - fontRendererObj.getStringWidth(ban);
+            int labelWidth = Math.max(0, banX - (left + 38) - 8);
+            fontRendererObj.drawString(fontRendererObj.trimStringToWidth(label, labelWidth), left + 38, y + 5, active ? t.success : t.text);
             String detail = AccountTypes.badge(a) + "  " + (AccountTypes.isOffline(a) ? "Offline mode" : Boolean.FALSE.equals(a.getAvailable()) ? "Sign-in needed" : a.getAvailable() == null ? "Not checked" : "Ready to sign in");
             fontRendererObj.drawString(TextFormatting.translate(detail), left + 38, y + 16, t.muted);
-            String ban = AccountTypes.isOffline(a) ? "" : TextFormatting.translate(HypixelBanCheck.renderStatus(a));
-            ban = fontRendererObj.trimStringToWidth(ban, 85);
-            fontRendererObj.drawString(ban, left + contentWidth - 12 - fontRendererObj.getStringWidth(ban), y + 6, t.muted);
+            fontRendererObj.drawString(ban, banX, y + 6, t.muted);
         }
         if (visible.isEmpty()) {
             drawCenteredString(fontRendererObj, UniversalAccountManager.accounts.isEmpty() ? "Add an account to get started" : "No matching accounts", width / 2, top + (bottom - top) / 2 - 4, t.muted);
@@ -171,6 +172,7 @@ public class GuiAccountManager extends GuiScreen {
             case 12: if (UiTheme.get().modern) mc.displayGuiScreen(new GuiAppearance(this)); break;
             case 13: pinnedOnly = !pinnedOnly; first = 0; button.displayString = pinnedOnly ? "Pinned" : "All"; break;
             case 14: alphabetical = !alphabetical; button.displayString = alphabetical ? "Sort: A-Z" : "Sort: saved"; break;
+            case 16: checkAccount(); break;
             case 15:
                 if (deleted != null) {
                     UniversalAccountManager.accounts.add(Math.min(deletedIndex, UniversalAccountManager.accounts.size()), deleted);
@@ -205,6 +207,30 @@ public class GuiAccountManager extends GuiScreen {
         if (selected == null || busy()) return;
         selected.setPinned(!selected.isPinned()); UniversalAccountManager.resort(); UniversalAccountManager.save(); rebuild();
     }
+    private void checkAccount() {
+        if (selected == null || selected.getAvailable() != null || busy()) return;
+        final Account account = selected;
+        if (AccountTypes.isOffline(account)) {
+            account.setAvailable(Boolean.TRUE);
+            message("Account is ready.");
+            return;
+        }
+        if (executor == null || executor.isShutdown()) executor = Executors.newSingleThreadExecutor();
+        message("Checking " + name(account) + "...");
+        task = CompletableFuture.runAsync(new Runnable() {
+            @Override public void run() {
+                try {
+                    // Refresh stored credentials if necessary, but do not replace the live session.
+                    AccountLogin.Result result = AccountLogin.login(account, null);
+                    AccountLogin.apply(account, result);
+                    message("Account check passed for " + name(account) + ".");
+                } catch (Exception error) {
+                    account.setAvailable(Boolean.FALSE);
+                    message("Account check failed: " + AuthHttp.rootMessage(error));
+                }
+            }
+        }, executor);
+    }
     private Account activeLauncher() {
         for (Account a : UniversalAccountManager.accounts) if (a.isLauncher() && name(a).equals(mc.getSession().getUsername())) return a;
         return null;
@@ -216,12 +242,17 @@ public class GuiAccountManager extends GuiScreen {
         contextButtons.clear();
         if (selected == null || busy()) return;
         boolean launcher = activeLauncher() == selected;
+        boolean unchecked = selected.getAvailable() == null;
+        int itemCount = 4 + (unchecked ? 1 : 0) + (launcher ? 1 : 0);
         int menuX = Math.max(2, Math.min(x, width - 114));
-        int menuY = Math.max(2, Math.min(y, height - (launcher ? 110 : 88) - 2));
-        int[] ids = {0, 4, 7, 2, 9};
-        String[] labels = {"Log in", selected.isPinned() ? "Unpin" : "Pin", "Copy name", "Delete...", "Save launcher"};
-        for (int i = 0; i < (launcher ? 5 : 4); i++)
-            contextButtons.add(new GuiButton(ids[i], menuX, menuY + i * 22, 112, 20, labels[i]));
+        int menuY = Math.max(2, Math.min(y, height - itemCount * 22 - 2));
+        int row = 0;
+        if (unchecked) contextButtons.add(new GuiButton(16, menuX, menuY + row++ * 22, 112, 20, "Check account"));
+        contextButtons.add(new GuiButton(0, menuX, menuY + row++ * 22, 112, 20, "Log in"));
+        contextButtons.add(new GuiButton(4, menuX, menuY + row++ * 22, 112, 20, selected.isPinned() ? "Unpin" : "Pin"));
+        contextButtons.add(new GuiButton(7, menuX, menuY + row++ * 22, 112, 20, "Copy name"));
+        contextButtons.add(new GuiButton(2, menuX, menuY + row++ * 22, 112, 20, "Delete..."));
+        if (launcher) contextButtons.add(new GuiButton(9, menuX, menuY + row * 22, 112, 20, "Save launcher"));
     }
 
     @Override protected void mouseClicked(int x, int y, int button) throws IOException {

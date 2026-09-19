@@ -28,9 +28,9 @@ if (Test-Path -LiteralPath $oldKeyFile) {
     if ($value.Length) { $needles.Add($value); $needles.Add([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($value))) }
 }
 $artifacts = @(
-    (Join-Path $project 'build\libs\UniversalAccountManager-2.15.jar'),
-    (Join-Path $project 'build\libs\UniversalAccountManager-2.15-modern.jar'),
-    (Join-Path $project 'build\libs\UniversalAccountManager-2.15-legacy.jar'),
+    (Join-Path $project 'build\libs\UniversalAccountManager-2.16.jar'),
+    (Join-Path $project 'build\libs\UniversalAccountManager-2.16-modern.jar'),
+    (Join-Path $project 'build\libs\UniversalAccountManager-2.16-legacy.jar'),
     (Join-Path (Split-Path $project -Parent) 'BlankClient\build\libs\BlankUtils-1.0.jar')
 )
 foreach ($file in $artifacts) {

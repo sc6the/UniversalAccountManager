@@ -2,14 +2,14 @@
 
 ## Download (Forge 1.8.9)
 
-Get **one** edition from [release v2.15](https://github.com/sc6the/UniversalAccountManager/releases/tag/v2.15)
+Get **one** edition from [release v2.16](https://github.com/sc6the/UniversalAccountManager/releases/tag/v2.16)
 and place its JAR in your Minecraft `mods` folder. Remove older UAM JARs before launching;
 do not install Modern and Legacy together. BlankUtils is optional, not required.
 
 | Edition | Download | Appearance |
 | --- | --- | --- |
-| Legacy (default) | [Legacy JAR](https://github.com/sc6the/UniversalAccountManager/releases/download/v2.15/UniversalAccountManager-2.15-legacy.jar) | Selected resource pack's vanilla widgets, transparent panels, Vanilla colors |
-| Modern | [Modern JAR](https://github.com/sc6the/UniversalAccountManager/releases/download/v2.15/UniversalAccountManager-2.15-modern.jar) | Catppuccin Mocha, Vanilla, OLED Black & White, and custom colors |
+| Legacy (default) | [Legacy JAR](https://github.com/sc6the/UniversalAccountManager/releases/download/v2.16/UniversalAccountManager-2.16-legacy.jar) | Selected resource pack's vanilla widgets, transparent panels, Vanilla colors |
+| Modern | [Modern JAR](https://github.com/sc6the/UniversalAccountManager/releases/download/v2.16/UniversalAccountManager-2.16-modern.jar) | Catppuccin Mocha, Vanilla, OLED Black & White, and custom colors |
 
 Both editions have the same account-management features. The release also includes SHA-256 checksums.
 Local account files, store API keys and personal configuration are not bundled.
@@ -36,8 +36,9 @@ Only visible rows render; no additional UI dependencies, blur passes or animatio
 
 - Ctrl+F: focus search. Escape clears search first, then returns.
 - Up/Down, Page Up/Down, Home/End: select and reveal a row. Enter: log in.
-- Ctrl+C: copy the selected name. Right-click a row: log in, pin/unpin, copy name, delete,
-  or save the active launcher account. The footer keeps Log in, Add Account and Done.
+- Ctrl+C: copy the selected name. Right-click a row: check an unchecked account without switching
+  sessions, log in, pin/unpin, copy name, delete, or save the active launcher account. The footer
+  keeps Log in, Add Account and Done.
 - Ctrl+Up/Down: reorder within the pinned/unpinned group in unfiltered saved order.
 - Delete: confirm removal. Ctrl+Z or the temporary Undo button restores the last removed account.
   Undo remains available until this account-screen instance is discarded.
@@ -48,7 +49,7 @@ Build both editions and run the preferences test with Java 8:
 .\gradlew.bat modernJar legacyJar themeTest
 ```
 
-Outputs: `build/libs/UniversalAccountManager-2.15-modern.jar` and `-legacy.jar`.
+Outputs: `build/libs/UniversalAccountManager-2.16-modern.jar` and `-legacy.jar`.
 Install only one edition at a time. Change editions by replacing the jar; presets are Modern-only.
 `scripts/install.ps1` installs Legacy UAM and the already-built sibling BlankUtils jar,
 backs up replaced jars under `.minecraft/mod-backups`, and stores the other edition outside the
@@ -244,7 +245,7 @@ Use Java 8 and run:
 ```
 
 The standalone mod is written to
-`build/libs/UniversalAccountManager-2.15.jar` (Legacy default).
+`build/libs/UniversalAccountManager-2.16.jar` (Legacy default).
 
 The build is an overlay: classes compiled here shadow same-named classes from
 `libs/UniversalAccountManager-1.7-original.jar` when the two are merged, and mixins cover what

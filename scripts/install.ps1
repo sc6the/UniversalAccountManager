@@ -5,9 +5,9 @@ $minecraft = [IO.Path]::GetFullPath((Join-Path $env:APPDATA '.minecraft'))
 $mods = Join-Path $minecraft 'mods'
 $variants = Join-Path $minecraft 'mod-variants\UniversalAccountManager'
 $utils = Join-Path (Split-Path $project -Parent) 'BlankClient\build\libs\BlankUtils-1.0.jar'
-$chosen = Join-Path $project "build\libs\UniversalAccountManager-2.15-$Edition.jar"
-$modern = Join-Path $project 'build\libs\UniversalAccountManager-2.15-modern.jar'
-$legacy = Join-Path $project 'build\libs\UniversalAccountManager-2.15-legacy.jar'
+$chosen = Join-Path $project "build\libs\UniversalAccountManager-2.16-$Edition.jar"
+$modern = Join-Path $project 'build\libs\UniversalAccountManager-2.16-modern.jar'
+$legacy = Join-Path $project 'build\libs\UniversalAccountManager-2.16-legacy.jar'
 foreach ($file in @($chosen, $modern, $legacy, $utils)) {
     if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "Build artifact missing: $file" }
 }

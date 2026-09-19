@@ -31,7 +31,7 @@ public final class UiSmoke {
         GuiScreen s = Minecraft.getMinecraft().currentScreen;
         GuiButton found = null;
         for (GuiButton b : buttons(s)) if (b.id == id) found = b;
-        if (found == null && s instanceof GuiAccountManager && (id == 2 || id == 4 || id == 7 || id == 9)) {
+        if (found == null && s instanceof GuiAccountManager && (id == 2 || id == 4 || id == 7 || id == 9 || id == 16)) {
             Field left = GuiAccountManager.class.getDeclaredField("left"); left.setAccessible(true);
             Field top = GuiAccountManager.class.getDeclaredField("top"); top.setAccessible(true);
             Method mouse = GuiAccountManager.class.getDeclaredMethod("func_73864_a", int.class, int.class, int.class); mouse.setAccessible(true);
@@ -75,6 +75,10 @@ public final class UiSmoke {
                     for (GuiButton b : buttons(accounts))
                         if (b.id == 2 || b.id == 4 || b.id == 7) throw new AssertionError("Secondary action still in footer");
                     shot("01-default-accounts");
+                    String sessionBeforeCheck = mc.getSession().getUsername();
+                    click(16);
+                    if (!Boolean.TRUE.equals(UniversalAccountManager.accounts.get(0).getAvailable())) throw new AssertionError("Account check did not update availability");
+                    if (!sessionBeforeCheck.equals(mc.getSession().getUsername())) throw new AssertionError("Account check switched the active session");
                     if (UiTheme.get().modern) click(12);
                     else {
                         for (GuiButton b : buttons(accounts)) if (b.id == 12) throw new AssertionError("Legacy exposes Appearance");
@@ -118,7 +122,7 @@ public final class UiSmoke {
                     List<?> matches = (List<?>) filtered.get(accounts);
                     if (matches.size() != 1 || !((Account) matches.get(0)).getUsername().equals("PreviewUser17")) throw new AssertionError("Search failed");
                     shot("10-search");
-                    System.out.println("UAM_UI_SMOKE_PASS: menu, editions, presets, pin filter, delete/undo, add, stores, changer, offline login, search");
+                    System.out.println("UAM_UI_SMOKE_PASS: menu, account check, editions, presets, pin filter, delete/undo, add, stores, changer, offline login, search");
                     mc.shutdown(); break;
                 default: break;
             }
